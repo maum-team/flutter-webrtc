@@ -1,6 +1,10 @@
 
 # Changelog
 
+[0.12.12] - 2025-03-05
+
+* [Android] fix: android ANR sleep when wait camera events.
+
 [0.12.11] - 2025-02-23
 
 * [web] bump version for dart_webrtc.
