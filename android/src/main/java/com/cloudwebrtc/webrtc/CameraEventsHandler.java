@@ -19,9 +19,16 @@ class CameraEventsHandler implements CameraVideoCapturer.CameraEventsHandler {
 
     public void waitForCameraOpen() {
         Log.d(TAG, "CameraEventsHandler.waitForCameraOpen");
+        long startTime = System.currentTimeMillis();
         while (state != CameraState.OPENED && state != CameraState.ERROR) {
+            if (System.currentTimeMillis() - startTime > 3000) {
+                state = CameraState.ERROR;
+                Log.e(TAG, "(waitForCameraOpen): Camera open timed out");
+                break;
+            }
+
             try {
-                Thread.sleep(1);
+                Thread.sleep(100);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -30,9 +37,16 @@ class CameraEventsHandler implements CameraVideoCapturer.CameraEventsHandler {
 
     public void waitForCameraClosed() {
         Log.d(TAG, "CameraEventsHandler.waitForCameraClosed");
+        long startTime = System.currentTimeMillis();
         while (state != CameraState.CLOSED && state != CameraState.ERROR) {
+            if (System.currentTimeMillis() - startTime > 3000) {
+                state = CameraState.ERROR;
+                Log.e(TAG, "(waitForCameraClosed): Camera close timed out");
+                break;
+            }
+
             try {
-                Thread.sleep(1);
+                Thread.sleep(100);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
