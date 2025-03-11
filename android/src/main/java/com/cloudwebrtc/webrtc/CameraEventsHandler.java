@@ -4,6 +4,17 @@ import android.util.Log;
 
 import org.webrtc.CameraVideoCapturer;
 
+// 사용자 정의 예외 클래스
+class CameraTimeoutException extends Exception {
+    public CameraTimeoutException(String message) {
+        super(message);
+    }
+
+    public CameraTimeoutException(String message, Throwable cause) {
+        super(message, cause);
+    }
+}
+
 class CameraEventsHandler implements CameraVideoCapturer.CameraEventsHandler {
     public enum CameraState {
         NEW,
@@ -19,16 +30,9 @@ class CameraEventsHandler implements CameraVideoCapturer.CameraEventsHandler {
 
     public void waitForCameraOpen() {
         Log.d(TAG, "CameraEventsHandler.waitForCameraOpen");
-        long startTime = System.currentTimeMillis();
         while (state != CameraState.OPENED && state != CameraState.ERROR) {
-            if (System.currentTimeMillis() - startTime > 3000) {
-                state = CameraState.ERROR;
-                Log.e(TAG, "(waitForCameraOpen): Camera open timed out");
-                break;
-            }
-
             try {
-                Thread.sleep(100);
+                Thread.sleep(1);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -37,18 +41,52 @@ class CameraEventsHandler implements CameraVideoCapturer.CameraEventsHandler {
 
     public void waitForCameraClosed() {
         Log.d(TAG, "CameraEventsHandler.waitForCameraClosed");
-        long startTime = System.currentTimeMillis();
         while (state != CameraState.CLOSED && state != CameraState.ERROR) {
-            if (System.currentTimeMillis() - startTime > 3000) {
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void waitForCameraOpenLimit() throws CameraTimeoutException {
+        Log.d(TAG, "CameraEventsHandler.waitForCameraOpenLimit");
+        long startTime = System.currentTimeMillis();
+
+        while (state != CameraState.OPENED && state != CameraState.ERROR) {
+            if (System.currentTimeMillis() - startTime > 1000) {
                 state = CameraState.ERROR;
-                Log.e(TAG, "(waitForCameraClosed): Camera close timed out");
-                break;
+                Log.e(TAG, "(waitForCameraOpenLimit): Camera open timed out");
+                throw new CameraTimeoutException("Camera open timed out after 1 second");
             }
 
             try {
-                Thread.sleep(100);
+                Thread.sleep(10);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                Log.e(TAG, "Interrupted while waiting for camera", e);
+                state = CameraState.ERROR;
+                throw new CameraTimeoutException("Interrupted during camera open wait", e);
+            }
+        }
+    }
+
+    public void waitForCameraClosedLimit() throws CameraTimeoutException {
+        Log.d(TAG, "CameraEventsHandler.waitForCameraClosedLimit");
+        long startTime = System.currentTimeMillis();
+        while (state != CameraState.CLOSED && state != CameraState.ERROR) {
+            if (System.currentTimeMillis() - startTime > 1000) {
+                state = CameraState.ERROR;
+                Log.e(TAG, "(waitForCameraClosedLimit): Camera close timed out");
+                throw new CameraTimeoutException("Camera close timed out after 1 second");
+            }
+
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                Log.e(TAG, "Interrupted while closing for camera", e);
+                state = CameraState.ERROR;
+                throw new CameraTimeoutException("Interrupted during camera closed wait", e);
             }
         }
     }

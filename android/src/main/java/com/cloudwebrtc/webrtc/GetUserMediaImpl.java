@@ -608,12 +608,33 @@ public class GetUserMediaImpl {
             MediaStream mediaStream,
             List<String> grantedPermissions) {
         ConstraintsMap[] trackParams = new ConstraintsMap[2];
+        Exception lastException = null;
+
+        // 오디오 트랙 생성
+        if (grantedPermissions.contains(PERMISSION_AUDIO)) {
+            try {
+                trackParams[0] = getUserAudio(constraints, mediaStream);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to get user audio", e);
+                trackParams[0] = null;
+                lastException = e;
+            }
+        }
+
+        // 비디오 트랙 생성
+        if (grantedPermissions.contains(PERMISSION_VIDEO)) {
+            try {
+                trackParams[1] = getUserVideo(constraints, mediaStream);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to get user video", e);
+                trackParams[1] = null;
+                lastException = e;
+            }
+        }
 
         // If we fail to create either, destroy the other one and fail.
-        if ((grantedPermissions.contains(PERMISSION_AUDIO)
-                && (trackParams[0] = getUserAudio(constraints, mediaStream)) == null)
-                || (grantedPermissions.contains(PERMISSION_VIDEO)
-                && (trackParams[1] = getUserVideo(constraints, mediaStream)) == null)) {
+        if ((grantedPermissions.contains(PERMISSION_AUDIO) && trackParams[0] == null) ||
+            (grantedPermissions.contains(PERMISSION_VIDEO) && trackParams[1] == null)) {
             for (MediaStreamTrack track : mediaStream.audioTracks) {
                 if (track != null) {
                     track.dispose();
@@ -628,7 +649,9 @@ public class GetUserMediaImpl {
             // specified by
             // https://www.w3.org/TR/mediacapture-streams/#dom-mediadevices-getusermedia
             // with respect to distinguishing the various causes of failure.
-            resultError("getUserMedia", "Failed to create new track.", result);
+            String errorMessage = "Failed to create new track" +
+                    (lastException != null ? ": " + lastException.getMessage() : "");
+            resultError("getUserMedia", errorMessage, result);
             return;
         }
 
@@ -696,7 +719,7 @@ public class GetUserMediaImpl {
         return null;
     }
 
-    private ConstraintsMap getUserVideo(ConstraintsMap constraints, MediaStream mediaStream) {
+    private ConstraintsMap getUserVideo(ConstraintsMap constraints, MediaStream mediaStream) throws CameraTimeoutException {
         ConstraintsMap videoConstraintsMap = null;
         ConstraintsMap videoConstraintsMandatory = null;
         if (constraints.getType("video") == ObjectType.Map) {
@@ -806,7 +829,7 @@ public class GetUserMediaImpl {
         info.cameraEventsHandler = cameraEventsHandler;
         videoCapturer.startCapture(targetWidth, targetHeight, targetFps);
 
-        cameraEventsHandler.waitForCameraOpen();
+        cameraEventsHandler.waitForCameraOpenLimit();
 
 
         String trackId = stateProvider.getNextTrackUUID();
@@ -850,11 +873,14 @@ public class GetUserMediaImpl {
             try {
                 info.capturer.stopCapture();
                 if (info.cameraEventsHandler != null) {
-                    info.cameraEventsHandler.waitForCameraClosed();
+                    info.cameraEventsHandler.waitForCameraClosedLimit();
                 }
             } catch (InterruptedException e) {
                 Log.e(TAG, "removeVideoCapturer() Failed to stop video capturer");
-            } finally {
+            } catch (CameraTimeoutException e) {
+                Log.e(TAG, "removeVideoCapturer() Failed to stop video capturer timeout");
+            }
+            finally {
                 info.capturer.dispose();
                 mVideoCapturers.remove(id);
                 SurfaceTextureHelper helper = mSurfaceTextureHelpers.get(id);
