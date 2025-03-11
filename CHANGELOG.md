@@ -1,6 +1,10 @@
 
 # Changelog
 
+[0.12.12] - 2025-03-11
+
+* [Android] fix: add new exception of camera events handler
+
 [0.12.11-alpha] - 2025-03-05
 
 * [Android] fix: android ANR sleep when wait camera events.
