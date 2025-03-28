@@ -1,6 +1,11 @@
 
 # Changelog
 
+[0.12.13] - 2025-03-28
+
+* [Android] feat: Migrate to the new Surface API.
+* [Android] bug; 중복 dispose 처리
+
 [0.12.12] - 2025-03-11
 
 * [Android] fix: add new exception of camera events handler
