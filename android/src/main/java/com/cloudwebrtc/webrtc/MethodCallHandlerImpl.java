@@ -146,14 +146,27 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
 
   void dispose() {
     for (final MediaStream mediaStream : localStreams.values()) {
+      // 비디오 트랙 제거 (필요하다면 캡처기도 제거)
+      for (VideoTrack videoTrack : mediaStream.videoTracks) {
+        localTracks.remove(videoTrack.id());
+        getUserMediaImpl.removeVideoCapturer(videoTrack.id());
+      }
+      // 오디오 트랙 제거
+      for (AudioTrack audioTrack : mediaStream.audioTracks) {
+        localTracks.remove(audioTrack.id());
+      }
       streamDispose(mediaStream);
       mediaStream.dispose();
     }
     localStreams.clear();
+
+    // MediaStream에 포함되지 않은 남은 트랙을 dispose합니다.
     for (final LocalTrack track : localTracks.values()) {
       track.dispose();
     }
     localTracks.clear();
+
+    // 피어 연결 관련 리소스 해제
     for (final PeerConnectionObserver connection : mPeerConnectionObservers.values()) {
       peerConnectionDispose(connection);
     }
